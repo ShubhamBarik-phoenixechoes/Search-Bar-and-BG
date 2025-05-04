@@ -1,0 +1,163 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>BG and Search</title>
+  <!-- External CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css">
+  <link rel="stylesheet" href="style.css">
+  <!-- Prism.js Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-markup.min.js"></script>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-content">
+      <div class="nav-buttons">
+        <button class="mode-switch">Mode: Ripple</button>
+        <button class="inspect-mode-switch">Inspect: Off</button>
+      </div>
+    </div>
+  </nav>
+  
+  <!-- Code Preview for Inspect Mode -->
+  <div class="code-preview"></div>
+  
+  <!-- Background -->
+  <div class="BG"></div>
+  
+  <!-- Audio Elements -->
+  <audio id="clickSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" preload="auto"></audio>
+  <audio id="rippleSound" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" preload="auto"></audio>
+  
+  <!-- Search Section -->
+  <div class="search-wrapper">
+    <div class="box">
+      <i class="fas fa-search"></i>
+      <input type="text" id="search-input" placeholder="Search...">
+    </div>
+    <div class="search-buttons">
+      <button onclick="search('google')" class="search-btn google-btn">
+        <img src="https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png" alt="Google">
+      </button>
+      <button onclick="search('youtube')" class="search-btn youtube-btn">
+        <i class="fab fa-youtube"></i>
+      </button>
+    </div>
+    <div class="watermark">created by Phoenix</div>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    // Search functionality
+    function search(platform) {
+      const clickSound = document.getElementById('clickSound');
+      clickSound.currentTime = 0;
+      clickSound.play().catch(err => console.log('Audio play failed:', err));
+      
+      const query = document.getElementById('search-input').value;
+      if (query.trim() !== '') {
+        const baseUrl = platform === 'google' 
+          ? 'https://www.google.com/search?q=' 
+          : 'https://www.youtube.com/results?search_query=';
+        window.location.href = baseUrl + encodeURIComponent(query);
+      }
+    }
+
+    // Background effects
+    const bg = document.querySelector('.BG');
+    const modeSwitch = document.querySelector('.mode-switch');
+    let isInteractive = true;
+
+    modeSwitch.addEventListener('click', () => {
+      isInteractive = !isInteractive;
+      if (!isInteractive) {
+        bg.classList.add('animate');
+        modeSwitch.textContent = 'Mode: Linear';
+        bg.style.backgroundImage = generateLinearGradient();
+      } else {
+        bg.classList.remove('animate');
+        modeSwitch.textContent = 'Mode: Ripple';
+      }
+    });
+
+    function generateLinearGradient() {
+      return `linear-gradient(45deg, ${Array(5).fill()
+        .map(() => `hsl(${Math.random() * 360}deg, 70%, 60%)`)
+        .join(',')})`;
+    }
+
+    function generateRadialGradient(x, y) {
+      return `radial-gradient(circle at ${x}% ${y}%, ${Array(10).fill()
+        .map(() => `hsl(${Math.random() * 360}deg, 70%, 60%)`)
+        .join(',')})`;
+    }
+
+    bg.addEventListener('click', function(e) {
+      if (!isInteractive) return;
+      
+      const rippleSound = document.getElementById('rippleSound');
+      rippleSound.currentTime = 0;
+      rippleSound.play().catch(err => console.log('Audio play failed:', err));
+      
+      createRipple(e, this);
+      updateBackgroundGradient(e, this);
+    });
+
+    function createRipple(e, element) {
+      const ripple = document.createElement('div');
+      ripple.className = 'ripple';
+      element.appendChild(ripple);
+      
+      const rect = element.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = e.clientX - rect.left - size/2 + 'px';
+      ripple.style.top = e.clientY - rect.top - size/2 + 'px';
+      
+      ripple.addEventListener('animationend', () => ripple.remove());
+    }
+
+    function updateBackgroundGradient(e, element) {
+      const x = (e.clientX / window.innerWidth) * 100;
+      const y = (e.clientY / window.innerHeight) * 100;
+      element.style.backgroundPosition = `${x}% ${y}%`;
+      element.style.backgroundImage = generateRadialGradient(x, y);
+    }
+
+    // Inspect mode
+    const inspectModeSwitch = document.querySelector('.inspect-mode-switch');
+    const codePreview = document.querySelector('.code-preview');
+    let isInspectMode = false;
+
+    inspectModeSwitch.addEventListener('click', () => {
+      isInspectMode = !isInspectMode;
+      document.body.classList.toggle('inspect-mode');
+      inspectModeSwitch.textContent = `Inspect: ${isInspectMode ? 'On' : 'Off'}`;
+    });
+
+    document.addEventListener('mouseover', (e) => {
+      if (!isInspectMode) return;
+      
+      const target = e.target;
+      if (target === codePreview) return;
+
+      const html = target.outerHTML
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .slice(0, 200);
+
+      const rect = target.getBoundingClientRect();
+      codePreview.innerHTML = `<pre><code class="language-markup">${html}</code></pre>`;
+      Prism.highlightAll();
+      codePreview.style.top = (rect.bottom + 5) + 'px';
+      codePreview.style.left = rect.left + 'px';
+    });
+  </script>
+</body>
+</html>
